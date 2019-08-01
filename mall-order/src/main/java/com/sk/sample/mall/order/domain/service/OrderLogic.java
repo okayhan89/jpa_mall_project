@@ -4,8 +4,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.sk.sample.mall.order.application.proxy.feign.AccountProxy;
+import com.sk.sample.mall.order.application.proxy.feign.PaymentProxy;
 import com.sk.sample.mall.order.application.proxy.feign.ProductProxy;
 import com.sk.sample.mall.order.application.proxy.feign.dto.account.Account;
+import com.sk.sample.mall.order.application.proxy.feign.dto.payment.Payment;
 import com.sk.sample.mall.order.application.proxy.feign.dto.product.Product;
 import com.sk.sample.mall.order.domain.model.Order;
 import com.sk.sample.mall.order.domain.repository.OrderRepository;
@@ -20,6 +22,9 @@ public class OrderLogic implements OrderService {
 	
 	@Autowired
 	private ProductProxy productProxy;
+	
+	@Autowired
+	private PaymentProxy paymentProxy;
 	
 	public void purchase(Long orderId) {
 		Order order = orderRepository.findOne(orderId);
@@ -52,9 +57,21 @@ public class OrderLogic implements OrderService {
 		System.out.println("Product: " + product.toString());
 			
 		order.setTotalPrice(order.getProductCount() * product.getPrice().getValue());
-		order.setPurchased(true);
-		System.out.println("Order: " + order.toString());
+		
+		Payment payment = new Payment(order.getCreditCard(), order.getTotalPrice());
+		Payment resultPayment = paymentProxy.pay(payment);
+		
+		if(resultPayment.getSuccessed()) {
+			order.setPurchased(true);
+			System.out.println("Order: " + order.toString());
 			
-		orderRepository.save(order);
+			orderRepository.save(order);
+			
+		}
+		System.err.println("결제 실패 ");
+//		order.setPurchased(true);
+//		System.out.println("Order: " + order.toString());
+//			
+//		orderRepository.save(order);
 	}
 }
